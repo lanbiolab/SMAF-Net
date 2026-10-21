@@ -6,16 +6,16 @@ SMAF-Net combines fundus images, OCT volumes and tabular features using mask-awa
 
 ## Code availability
 
-This source package includes the core SMAF-Net model, training code, a concatenation baseline, and structured and random missing-modality evaluation. Implementations of competing methods are not included. Data, trained weights, participant identifiers and experiment outputs are not distributed. The paper's numerical results have not been independently reproduced from this package.
+This repository provides the SMAF-Net implementation, training pipeline, concatenation baseline, and missing-modality evaluation. Datasets, pretrained SMAF-Net checkpoints, and competing-method implementations are not included.
 
 ## Contents
 
 | Location | Contents |
 | --- | --- |
-| `SMAF-Net/models/model.py` | Mask-aware fusion and multimodal model (legacy class name `BaselineConcatModel`) |
+| `SMAF-Net/models/model.py` | SMAF-Net architecture and mask-aware fusion |
 | `SMAF-Net/trainer.py` | Training, scenario sampling, auxiliary losses and validation threshold selection |
 | `SMAF-Net/evaluate.py` | Structured and proportional random missingness |
-| `Configs/` | Portable UK Biobank input/configuration templates |
+| `Configs/` | UK Biobank experiment configuration |
 | `run.py` | Unified command-line entry point |
 
 
@@ -27,7 +27,7 @@ Use Python 3.10 or later. Install a compatible PyTorch/torchvision build for you
 pip install -r requirements.txt
 ```
 
-Run commands from this repository root and edit data paths in `Configs/*.yaml`. ImageNet weights may download on the first run (`pretrained: true`). Prepare these local inputs:
+Run commands from the repository root and set your data paths in `Configs/smaf_ukb.yaml`. With `pretrained: true`, the image encoders use ImageNet weights, which may download on the first run. Prepare the following inputs:
 
 - `labels.csv`: `Participant ID` and binary `labels` columns.
 - `tabular.csv`: `Participant ID` and feature columns.
@@ -35,7 +35,7 @@ Run commands from this repository root and edit data paths in `Configs/*.yaml`. 
 - OCT files: `<id>_21017_<suffix>.zip` containing naturally ordered B-scan images.
 - `split.json`: disjoint `train_ids`, `val_ids`, `test_ids` lists matching the participant IDs. Keep the split fixed across methods and seeds.
 
-The modality-mask order is `[fundus, oct, tabular]`. Data and participant identifiers are excluded from version control.
+The modality-mask order is `[fundus, oct, tabular]`.
 
 ## Training
 
@@ -50,13 +50,13 @@ python run.py smaf --config Configs/smaf_ukb.yaml --set seed=4 output_dir=output
 python run.py smaf --config Configs/smaf_ukb.yaml --set seed=6 output_dir=outputs/smaf/ALL/seed_6
 ```
 
-Train a concatenation baseline with explicit component switches:
+Train the concatenation baseline:
 
 ```bash
 python run.py concat --config Configs/smaf_ukb.yaml --set fusion_type=concat use_mask_aware_fusion=false use_aux_heads=false modality_dropout_rate=0.0 output_dir=outputs/concat/ALL/seed_0
 ```
 
-This command defines the baseline settings; it is not a claim that this exact command reproduces a particular reported table row. For an imaging-only comparison, also set `use_tabular=false` and use a separate output directory.
+For an imaging-only experiment, set `use_tabular=false` and use a separate output directory.
 
 ## Missing-modality evaluation
 
@@ -67,13 +67,11 @@ python run.py missing --config Configs/smaf_ukb.yaml --output-root outputs/smaf 
 python run.py random-missing --config Configs/smaf_ukb.yaml --output-root outputs/smaf --seeds 0 4 6 --repeats 5 --complete-case-only --threshold-source val_ratio
 ```
 
-Thresholds are selected on validation data. Random masking restores one modality if all are removed, so nominal 100% masking is the single-modality limit. `--save-predictions` writes participant-level predictions locally; do not publish these with the repository.
+Thresholds are selected on validation data. Random masking restores one modality if all are removed, so nominal 100% masking is the single-modality limit. Use `--save-predictions` to save per-participant predictions locally.
 
-## Reproducibility notes
+## Experiment settings
 
-- The supplied SMAF-Net configuration explicitly sets `final_logit_mode: fusion`: auxiliary heads supervise training; inference uses the shared fusion classifier.
-- Scenario probabilities (0.20/0.10/0.10/0.20/0.15/0.15/0.10) and auxiliary weights (0.15/0.15/0.05) follow the archived fusion-output experiment summary. Scenario-balanced does not mean uniform sampling.
-- Original participant splits are excluded. Supply your authorized split JSON and preserve it across seeds and methods. Exact results depend on the original cohort, preprocessing, split and environment.
-- Configurations are UK Biobank templates. GAMMA/Harvard preprocessing, folds and exact table reproduction are not packaged here.
-- Legacy code contains optional inference modes and experiments beyond the manuscript. Use explicit configuration flags rather than constructor defaults.
-- Source is curated from the authors' SMAF-Net experiment project. Syntax and configuration checks have been performed; full training has not been revalidated in this package.
+- `final_logit_mode: fusion` uses the shared fusion classifier for inference. Auxiliary heads provide training supervision.
+- Scenario sampling probabilities are defined in `Configs/smaf_ukb.yaml`. Auxiliary loss weights for fundus, OCT and tabular inputs are 0.15, 0.15 and 0.05.
+- Supply a participant-level split JSON and keep it fixed across seeds and methods. Original participant splits are not distributed.
+- The included configuration targets UK Biobank. GAMMA and Harvard preprocessing and fold-generation scripts are not included.
