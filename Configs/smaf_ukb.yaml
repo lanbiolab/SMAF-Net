@@ -1,0 +1,81 @@
+use_fundus: true
+use_oct: true
+use_tabular: true
+
+labels_file: "data/ukb/labels.csv"
+text_file: "data/ukb/tabular.csv"
+fundus_dir: "data/ukb/fundus"
+oct_dir: "data/ukb/oct"
+
+split_ratio: [0.7, 0.15, 0.15]
+seed: 0
+split_file: "data/ukb/split.json"
+modality_dropout_rate: 0.3
+
+fundus_size: 384
+oct_size: 224
+oct_slices: 32
+oct_slice_jitter: 1
+
+fundus_mean: [0.485, 0.456, 0.406]
+fundus_std: [0.229, 0.224, 0.225]
+oct_mean: [0.5, 0.5, 0.5]
+oct_std: [0.25, 0.25, 0.25]
+
+batch_size: 4
+num_workers: 4
+pin_memory: true
+use_weighted_sampler: true
+allow_missing_modalities: false
+
+backbone: efficientnet_b0
+oct_backbone: efficientnet_b0
+pretrained: true
+feature_dim: 256
+fundus_token_grid: 6
+tabular_depth: 2
+tabular_heads: 4
+dropout: 0.10
+freeze_backbone_bn: true
+classifier_hidden_dim: 256
+
+tabular_add_missing_indicators: true
+
+epochs: 50
+patience: 8
+lr_fundus: 2.0e-5
+lr_oct: 2.0e-5
+lr_tabular: 5.0e-5
+lr_classifier: 1.0e-4
+
+min_learning_rate: 1.0e-6
+weight_decay: 1.0e-2
+grad_clip: 1.0
+warmup_epochs: 1
+amp: true
+
+selection_metric: AUROC
+threshold_metric: F1
+log_eval_threshold: 0.5
+
+device: cuda
+save_predictions: true
+output_dir: "outputs/smaf/ALL/seed_0"
+
+# Explicit settings from the fusion-output seed 0/4/6 experiment.
+fusion_type: attention
+use_mask_aware_fusion: true
+final_logit_mode: fusion
+use_aux_heads: true
+aux_fundus_weight: 0.15
+aux_oct_weight: 0.15
+aux_tabular_weight: 0.05
+modality_dropout_mode: scenario_balanced
+modality_dropout_scenario_probs:
+  full_complete: 0.20
+  no_fundus: 0.10
+  no_oct: 0.10
+  no_tabular: 0.20
+  fundus_only: 0.15
+  oct_only: 0.15
+  tabular_only: 0.10
